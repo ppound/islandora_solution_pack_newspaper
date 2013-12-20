@@ -43,7 +43,8 @@ function islandora_newspaper_get_current_sequence($object) {
  *   Returns the PID of the collection of which $object is a member of.
  */
 function islandora_newspaper_get_newspaper($object) {
-  $rels = $object->relationships->get(FEDORA_RELS_EXT_URI, 'isMemberOf');
+  $relationship = variable_get('islandora_newspaper_issue_relationship', 'isMemberOf');
+  $rels = $object->relationships->get(FEDORA_RELS_EXT_URI, $relationship);
   return $rels[0]['object']['value'];
 }
 
@@ -53,7 +54,7 @@ function islandora_newspaper_get_newspaper($object) {
  * The results are ordered by their RELS-EXT dateIssued property.
  * Older to newer.
  *
- * @param AbstractDatastream $object
+ * @param AbstractObject $object
  *   The datastream containing MODS.
  *
  * @return array
@@ -65,53 +66,65 @@ function islandora_newspaper_get_newspaper($object) {
  *     - issued: A DateTime object repersenting the date the issue was released.
  */
 function islandora_newspaper_get_issues(AbstractObject $object) {
-  $query = <<<EOQ
-PREFIX islandora-rels-ext: <http://islandora.ca/ontology/relsext#>
-PREFIX fedora-rels-ext: <info:fedora/fedora-system:def/relations-external#>
-SELECT ?pid ?sequence ?label ?issued
-FROM <#ri>
-WHERE {
-  ?pid fedora-rels-ext:isMemberOf <info:fedora/{$object->id}> ;
-       <fedora-model:hasModel> <info:fedora/islandora:newspaperIssueCModel> ;
-       <fedora-model:label> ?label
-  OPTIONAL {
-    ?pid islandora-rels-ext:dateIssued ?issued .
-  } .
-  OPTIONAL {
-    ?pid islandora-rels-ext:isSequenceNumber ?sequence
+  $relationship = variable_get('islandora_newspaper_issue_relationship', 'isMemberOf');
+
+  $solr_results = islandora_newspaper_get_solr_issues($object->id);
+  $results = array();
+
+  foreach($solr_results['response']['docs'] as $doc) {
+    $results[$doc['PID']] = array(
+      'pid' => $doc['PID'],
+      'label' => $doc['fgs_label_s'],
+      'sequence' => '',
+      @'issued' => new DateTime($doc['RELS_EXT_dateIssued_literal_ms'][0]),
+    ) ;
   }
+  return $results;
 }
-ORDER BY ?issued
-EOQ;
-  $results = $object->repository->ri->sparqlQuery($query);
-  // Map the results using a default Datetime for missing issued dates.
-  $map_results = function($o) {
-    try {
-      @$issued = new DateTime($o['issued']['value']);
+
+
+function islandora_newspaper_get_solr_issues($parent) {
+  $solr_location = variable_get('islandora_solr_url', 'http://localhost:8080/solr');
+  $solr_handler = variable_get('islandora_solr_request_handler', FALSE);
+  $path_parts = parse_url(variable_get('islandora_solr_url', 'localhost:8080/solr'));
+  $solr = new Apache_Solr_Service($path_parts['host'], $path_parts['port'], $path_parts['path'] . '/');
+  $solr->setCreateDocuments(0);
+  $parent = $solr->escape($parent);
+  $cmodel = $solr->escape('islandora:newspaperIssueCModel');
+  $solr_query = "content_model_ms:$cmodel AND parent_pid:$parent";
+  $solr_params = array();
+  $solr_params['fl'][] = 'PID, RELS_EXT_dateIssued_literal_ms, fgs_label_s';
+  $solr_params['sort'] = array('mods_originInfo_dateIssued_dt' . ' asc');
+  if ($solr_handler) {
+    $solr_params['qt'] = $solr_handler;
+  }
+  if ($namespaces_enforced) {
+    $namespace_list = trim(variable_get('islandora_pids_allowed', ''));
+    if ($namespace_list) {
+      $namespaces = preg_split('/[,|\s]/', $namespace_list);
+      $namespace_array = array();
+      foreach (array_filter($namespaces) as $namespace) {
+        $namespace_array[] = 'PID:' . Apache_Solr_Service::escape($namespace) . '*';
+      }
+      $solr_params['fq'][] = implode(' OR ', $namespace_array);
     }
-    catch (Exception $e) {
-      // Use the current time as a place holder.
-      $issued = new DateTime();
-      $msg  = 'Failed to get issued date from SPARQL query for @pid';
-      $vars = array('@pid' => $o['pid']['value']);
-      watchdog_exception('islandora_newspaper', $e, $msg, $vars, WATCHDOG_ERROR);
-    }
-    return array(
-      'pid' => $o['pid']['value'],
-      'label' => $o['label']['value'],
-      'sequence' => $o['sequence']['value'],
-      'issued' => $issued,
-    );
-  };
-  $issues = array_map($map_results, $results);
-  // Grab the PIDs...
-  $get_pid = function($o) {
-    return $o['pid'];
-  };
-  $pids = array_map($get_pid, $issues);
-  // Make the PIDs the keys.
-  return count($pids) ? array_combine($pids, $issues) : array();
+  }
+
+  try {
+    $method = 'GET';
+    $results = $solr->search($solr_query, $start, '100000', $solr_params, $method);
+  }
+  catch (Exception $e) {
+    watchdog('islandora_xmlsitemap', 'Error getting solr results %e',
+      array('%e' => $e->getMessage()));
+  }
+  $solr_results = NULL;
+  if (!empty($results)) {
+    $solr_results = json_decode($results->getRawResponse(), TRUE);
+  }
+  return $solr_results;
 }
+
 
 /**
  * Groups the issues by their relvant dates.
@@ -164,7 +177,7 @@ function islandora_newspaper_get_date_issued_from_mods(AbstractDatastream $datas
       $out = new DateTime($result);
     }
     catch (Exception $e) {
-      $msg  = 'Failed to get issued date from MODS for @pid';
+      $msg = 'Failed to get issued date from MODS for @pid';
       $vars = array('@pid' => $datastream->parent->id);
       watchdog_exception('islandora_newspaper', $e, $msg, $vars, WATCHDOG_ERROR);
     }
