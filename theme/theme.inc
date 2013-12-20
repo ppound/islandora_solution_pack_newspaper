@@ -11,7 +11,9 @@ require_once dirname(__FILE__) . '/../includes/utilities.inc';
  * Implements hook_preprocess().
  */
 function theme_islandora_newspaper(array $variables) {
+  $path = drupal_get_path('module', 'islandora_newspaper');
   drupal_add_js('misc/collapse.js');
+  drupal_add_js($path . '/js/islandora_newspaper.js');
   $object = $variables['object'];
   $issues = islandora_newspaper_get_issues($object);
   $grouped_issues = islandora_newspaper_group_issues($issues);

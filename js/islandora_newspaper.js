@@ -17,3 +17,17 @@
     }
   };
 })(jQuery);
+
+(function ($) {
+    // Select page
+    Drupal.behaviors.islandoraNewspaperScrollTop = {
+        attach: function(context, settings) {
+            $('.vertical-tab-button a').click(function() {
+                $('html, body').animate({
+                    scrollTop: $("#content").offset().top
+                }, 45);
+            })
+        }
+    };
+})(jQuery);
+
