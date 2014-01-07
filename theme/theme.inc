@@ -48,7 +48,7 @@ function theme_islandora_newspaper(array $variables) {
       '#type' => 'vertical_tabs',
     ),
   );
-  $tabs = &$output['tabs'];
+  $tabs = & $output['tabs'];
   foreach ($grouped_issues as $year => $months) {
     $tabs[$year] = array(
       '#title' => $year,
@@ -71,10 +71,10 @@ function theme_islandora_newspaper(array $variables) {
           '#prefix' => '<div>',
           '#suffix' => '</div>',
           '#text' => t("@month @day, @year", array(
-                     '@year' => $year,
-                     '@month' => $month_name,
-                     '@day' => $day,
-                   )),
+            '@year' => $year,
+            '@month' => $month_name,
+            '@day' => $day,
+          )),
           '#path' => "islandora/object/{$issue['pid']}",
           '#options' => array(
             'attributes' => array(),
@@ -161,10 +161,9 @@ function theme_islandora_newspaper_page_select(array $variables) {
   }
   $variables['#value'] = $object->id;
   $prefix = '<strong>' . t('Image') . ':</strong> ';
-  return $prefix . t('!page_selector of @total', array(
-      '!page_selector' => theme('select', array('element' => $variables)),
-      '@total' => count($pages),
-    ));
+  return $prefix . t('!page_selector', array(
+    '!page_selector' => theme('select', array('element' => $variables)),
+  ));
 }
 
 /**
@@ -173,10 +172,9 @@ function theme_islandora_newspaper_page_select(array $variables) {
 function islandora_newspaper_preprocess_islandora_newspaper_page_controls(array &$variables) {
   module_load_include('inc', 'islandora', 'includes/datastream');
   module_load_include('inc', 'islandora', 'includes/utilities');
-  global $base_url;
-  $view_prefix = '<strong>' . t('View:') . ' </strong>';
   $download_prefix = '<strong>' . t('Download:') . ' </strong>';
   $object = $variables['object'];
+  $pid = $object->id;
   $issue = islandora_newspaper_get_issue($object);
   $issue = islandora_object_load($issue);
   $controls = array(
@@ -185,26 +183,19 @@ function islandora_newspaper_preprocess_islandora_newspaper_page_controls(array 
     'issue_pager' => theme('islandora_newspaper_issue_navigator', array('object' => $issue)),
   );
   // Text view.
+  $options = array();
   if (isset($object['OCR']) && islandora_datastream_access(ISLANDORA_VIEW_OBJECTS, $object['OCR'])) {
-    $url = islandora_datastream_get_url($object['OCR'], 'view');
-    $attributes = array('attributes' => array('title' => t('View text')));
-    $controls['text_view'] = $view_prefix . l(t('Text'), $url, $attributes);
+    $options["$pid/datastream/OCR/download"] = t('OCR');
   }
   // PDF download.
   if (isset($object['PDF']) && islandora_datastream_access(ISLANDORA_VIEW_OBJECTS, $object['PDF'])) {
     $size = islandora_datastream_get_human_readable_size($object['PDF']);
-    $text = t('PDF (@size)', array('@size' => $size));
-    $url = islandora_datastream_get_url($object['PDF'], 'download');
-    $attributes = array('attributes' => array('title' => t('Download PDF')));
-    $controls['pdf_download'] = $download_prefix . l($text, $url, $attributes);
+    $options["$pid/datastream/PDF/download"] = t('PDF (@size)', array('@size' => $size));
   }
   if (isset($object['JP2']) && islandora_datastream_access(ISLANDORA_VIEW_OBJECTS, $object['JP2'])) {
     // JP2 download.
     $size = islandora_datastream_get_human_readable_size($object['JP2']);
-    $text = t('JP2 (@size)', array('@size' => $size));
-    $url = islandora_datastream_get_url($object['JP2'], 'download');
-    $attributes = array('attributes' => array('title' => t('Download JP2')));
-    $controls['jp2_download'] = $download_prefix . l($text, $url, $attributes);
+    $options["$pid/datastream/JP2/download"] = t('JP2 (@size)', array('@size' => $size));
 
     // JP2 Clip.
     $jp2_ds = $object['JP2'];
@@ -224,10 +215,14 @@ function islandora_newspaper_preprocess_islandora_newspaper_page_controls(array 
   // TIFF download.
   if (isset($object['OBJ']) && islandora_datastream_access(ISLANDORA_VIEW_OBJECTS, $object['OBJ'])) {
     $size = islandora_datastream_get_human_readable_size($object['OBJ']);
-    $text = t('TIFF (@size)', array('@size' => $size));
-    $url = islandora_datastream_get_url($object['OBJ'], 'download');
-    $attributes = array('attributes' => array('title' => t('Download TIFF')));
-    $controls['tiff_download'] = $download_prefix . l($text, $url, $attributes);
+    $options["$pid/datastream/TIFF/download"] = t('TIFF (@size)', array('@size' => $size));
+  }
+  if (!empty($options)) {
+    $download_select = array(
+      '#options' => $options,
+      '#attributes' => array('class' => array('page-select')),
+    );
+    $controls['download_select'] = $download_prefix . theme('select', array('element' => $download_select));
   }
   $variables['controls'] = $controls;
 }
