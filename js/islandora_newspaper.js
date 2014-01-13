@@ -10,7 +10,9 @@
       if (!$(".page-select").hasClass('processed')) {
         $(".page-select").change(function(e) {
           var pid = $("option:selected", this).attr('value');
-          window.location = Drupal.settings.basePath + 'islandora/object/' + pid; // check plain?
+          if(pid != '#Download') {
+            window.location = Drupal.settings.basePath + 'islandora/object/' + pid; // check plain?
+           }
         });
         $(".page-select").addClass('processed');
       }

@@ -185,7 +185,8 @@ function islandora_newspaper_preprocess_islandora_newspaper_page_controls(array 
   // Text view.
   $options = array();
   if (isset($object['OCR']) && islandora_datastream_access(FEDORA_VIEW_OBJECTS, $object['OCR'])) {
-    $options["$pid/datastream/OCR/download"] = t('OCR');
+    $size = islandora_datastream_get_human_readable_size($object['OCR']);
+    $options["$pid/datastream/OCR/download"] = t('OCR (@size)', array('@size' => $size));
   }
   // PDF download.
   if (isset($object['PDF']) && islandora_datastream_access(FEDORA_VIEW_OBJECTS, $object['PDF'])) {
@@ -218,11 +219,13 @@ function islandora_newspaper_preprocess_islandora_newspaper_page_controls(array 
     $options["$pid/datastream/TIFF/download"] = t('TIFF (@size)', array('@size' => $size));
   }
   if (!empty($options)) {
+    $download = array('#Download' => t('Download ...'));
+    $options = $download + $options;
     $download_select = array(
       '#options' => $options,
       '#attributes' => array('class' => array('page-select')),
     );
-    $controls['download_select'] = $download_prefix . theme('select', array('element' => $download_select));
+    $controls['download_select'] = theme('select', array('element' => $download_select));
   }
   $variables['controls'] = $controls;
 }
