@@ -184,15 +184,15 @@ function islandora_newspaper_preprocess_islandora_newspaper_page_controls(array 
   );
   // Text view.
   $options = array();
-  if (isset($object['OCR']) && islandora_datastream_access(ISLANDORA_VIEW_OBJECTS, $object['OCR'])) {
+  if (isset($object['OCR']) && islandora_datastream_access(FEDORA_VIEW_OBJECTS, $object['OCR'])) {
     $options["$pid/datastream/OCR/download"] = t('OCR');
   }
   // PDF download.
-  if (isset($object['PDF']) && islandora_datastream_access(ISLANDORA_VIEW_OBJECTS, $object['PDF'])) {
+  if (isset($object['PDF']) && islandora_datastream_access(FEDORA_VIEW_OBJECTS, $object['PDF'])) {
     $size = islandora_datastream_get_human_readable_size($object['PDF']);
     $options["$pid/datastream/PDF/download"] = t('PDF (@size)', array('@size' => $size));
   }
-  if (isset($object['JP2']) && islandora_datastream_access(ISLANDORA_VIEW_OBJECTS, $object['JP2'])) {
+  if (isset($object['JP2']) && islandora_datastream_access(FEDORA_VIEW_OBJECTS, $object['JP2'])) {
     // JP2 download.
     $size = islandora_datastream_get_human_readable_size($object['JP2']);
     $options["$pid/datastream/JP2/download"] = t('JP2 (@size)', array('@size' => $size));
@@ -213,7 +213,7 @@ function islandora_newspaper_preprocess_islandora_newspaper_page_controls(array 
     $controls['clip'] = l($image, $url, $attributes);
   }
   // TIFF download.
-  if (isset($object['OBJ']) && islandora_datastream_access(ISLANDORA_VIEW_OBJECTS, $object['OBJ'])) {
+  if (isset($object['OBJ']) && islandora_datastream_access(FEDORA_VIEW_OBJECTS, $object['OBJ'])) {
     $size = islandora_datastream_get_human_readable_size($object['OBJ']);
     $options["$pid/datastream/TIFF/download"] = t('TIFF (@size)', array('@size' => $size));
   }
