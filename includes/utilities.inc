@@ -39,14 +39,21 @@ function islandora_newspaper_get_current_sequence($object) {
  * @param object $object
  *   Newspaper issue object
  *
+ * @throws Exception
  * @return string
  *   Returns the PID of the collection of which $object is a member of.
  */
 function islandora_newspaper_get_newspaper($object) {
-  $relationship = variable_get('islandora_newspaper_issue_relationship', 'isMemberOf');
-  $rels = $object->relationships->get(FEDORA_RELS_EXT_URI, $relationship);
+  $rels = $object->relationships->get(FEDORA_RELS_EXT_URI, 'isMemberOf');
+  if (empty($rels[0]['object']['value'])) {
+    $rels = $object->relationships->get(FEDORA_RELS_EXT_URI, 'isMemberOfCollection');
+  }
+  if (empty($rels[0]['object']['value'])) {
+    throw new Exception('Could not find newspaper parent object');
+  }
   return $rels[0]['object']['value'];
 }
+
 
 /**
  * Gets all the issues that the given newspaper owns.
@@ -84,7 +91,6 @@ function islandora_newspaper_get_issues(AbstractObject $object) {
 
 
 function islandora_newspaper_get_solr_issues($parent) {
-  $solr_location = variable_get('islandora_solr_url', 'http://localhost:8080/solr');
   $solr_handler = variable_get('islandora_solr_request_handler', FALSE);
   $path_parts = parse_url(variable_get('islandora_solr_url', 'localhost:8080/solr'));
   $solr = new Apache_Solr_Service($path_parts['host'], $path_parts['port'], $path_parts['path'] . '/');
@@ -98,6 +104,7 @@ function islandora_newspaper_get_solr_issues($parent) {
   if ($solr_handler) {
     $solr_params['qt'] = $solr_handler;
   }
+  $namespaces_enforced = variable_get('islandora_namespace_restriction_enforced', FALSE);
   if ($namespaces_enforced) {
     $namespace_list = trim(variable_get('islandora_pids_allowed', ''));
     if ($namespace_list) {
@@ -115,7 +122,7 @@ function islandora_newspaper_get_solr_issues($parent) {
     $results = $solr->search($solr_query, $start, '100000', $solr_params, $method);
   }
   catch (Exception $e) {
-    watchdog('islandora_xmlsitemap', 'Error getting solr results %e',
+    watchdog('islandora_solutionpack_newspapers', 'Error getting solr results %e',
       array('%e' => $e->getMessage()));
   }
   $solr_results = NULL;
