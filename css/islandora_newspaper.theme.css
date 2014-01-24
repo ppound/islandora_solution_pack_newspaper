@@ -55,7 +55,7 @@ body.two-sidebars .islandora-newspaper-sidebar {
 @media all and (min-width: 768px) {
 
   body.no-sidebars .islandora-newspaper-content {
-    width: 65%;
+    width: 98%;
     float: left; /* LTR */
   }
 
@@ -100,4 +100,13 @@ body.two-sidebars .islandora-newspaper-sidebar {
   padding-top: 2px;
   padding-bottom: 2px;
 }
+
+#islandora-newspaper-controls-toolbar {
+    display: block;
+    clear: both;
+    text-align: right;
+    padding-left: 110px;
+}
+
+
 

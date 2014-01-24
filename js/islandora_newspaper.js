@@ -10,10 +10,26 @@
       if (!$(".page-select").hasClass('processed')) {
         $(".page-select").change(function(e) {
           var pid = $("option:selected", this).attr('value');
-          window.location = Drupal.settings.basePath + 'islandora/object/' + pid; // check plain?
+          if(pid != '#Download') {
+            window.location = Drupal.settings.basePath + 'islandora/object/' + pid; // check plain?
+           }
         });
         $(".page-select").addClass('processed');
       }
     }
   };
 })(jQuery);
+
+(function ($) {
+    // Select page
+    Drupal.behaviors.islandoraNewspaperScrollTop = {
+        attach: function(context, settings) {
+            $('.vertical-tab-button a').click(function() {
+                $('html, body').animate({
+                    scrollTop: $("#content").offset().top
+                }, 45);
+            })
+        }
+    };
+})(jQuery);
+
