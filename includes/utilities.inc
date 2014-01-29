@@ -135,7 +135,6 @@ function islandora_newspaper_get_solr_issues($parent) {
     $solr_results = json_decode($results->getRawResponse(), TRUE);
   }
   return $solr_results;
->>>>>>> 7.x-Roblib
 }
 
 
