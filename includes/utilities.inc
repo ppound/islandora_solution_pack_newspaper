@@ -124,7 +124,7 @@ function islandora_newspaper_get_solr_issues($parent) {
 
   try {
     $method = 'GET';
-    $results = $solr->search($solr_query, $start, '100000', $solr_params, $method);
+    $results = $solr->search($solr_query, 0, '100000', $solr_params, $method);
   }
   catch (Exception $e) {
     watchdog('islandora_solutionpack_newspapers', 'Error getting solr results %e',
