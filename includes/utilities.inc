@@ -82,19 +82,114 @@ function islandora_newspaper_get_issues(AbstractObject $object) {
 
   $solr_results = islandora_newspaper_get_solr_issues($object->id);
   $results = array();
-  foreach($solr_results['response']['docs'] as $doc) {
+  foreach ($solr_results['response']['docs'] as $doc) {
     $results[$doc['PID']] = array(
       'pid' => $doc['PID'],
       'label' => $doc['fgs_label_s'],
       'sequence' => '',
       @'issued' => new DateTime($doc['RELS_EXT_dateIssued_literal_ms'][0]),
-    ) ;
+    );
   }
   return $results;
 }
 
+/**
+ * Creates a renderable array from an array of issues.
+ *
+ * @param array $issues
+ *   An array of issues.
+ *
+ * @return array
+ *   A renderable array.
+ */
+function islandora_newspaper_format_issues($issues) {
+  $grouped_issues = islandora_newspaper_group_issues($issues);
+  $output = array(
+    'controls' => array(
+      '#theme' => 'links',
+      '#attributes' => array(
+        'class' => array('links', 'inline'),
+      ),
+      '#links' => array(
+        array(
+          'title' => t('Expand all months'),
+          'href' => "javascript://void(0)",
+          'html' => TRUE,
+          'external' => TRUE,
+          'attributes' => array(
+            'onclick' => "Drupal.toggleFieldset(jQuery('fieldset.month.collapsed'));",
+          ),
+        ),
+        array(
+          'title' => t('Collapse all months'),
+          'href' => "javascript://void(0)",
+          'html' => TRUE,
+          'external' => TRUE,
+          'attributes' => array(
+            'onclick' => "Drupal.toggleFieldset(jQuery('fieldset.month:not(.collapsed)'));",
+          ),
+        ),
+      ),
+    ),
+    'tabs' => array(
+      '#type' => 'vertical_tabs',
+    ),
+  );
+  $tabs = & $output['tabs'];
+  foreach ($grouped_issues as $year => $months) {
+    $tabs[$year] = array(
+      '#title' => $year,
+      '#type' => 'fieldset',
+    );
+    foreach ($months as $month => $days) {
+      $month_name = t("@date", array(
+        "@date" => date("F", mktime(0, 0, 0, $month, 1, 2000)),
+      ));
+      $tabs[$year][$month] = array(
+        '#title' => $month_name,
+        '#type' => 'fieldset',
+        '#attributes' => array(
+          'class' => array('collapsible', 'collapsed', 'month'),
+        ),
+      );
+      foreach ($days as $day => $issues) {
+        foreach ($issues as $issue) {
+          $tabs[$year][$month][$day][] = array(
+            '#theme' => 'link',
+            '#prefix' => '<div>',
+            '#suffix' => '</div>',
+            '#text' => t("@month @day, @year", array(
+              '@year' => $year,
+              '@month' => $month_name,
+              '@day' => $day,
+            )),
+            '#path' => "islandora/object/{$issue['pid']}",
+            '#options' => array(
+              'attributes' => array(),
+              'html' => FALSE,
+            ),
+          );
+        }
+      }
+      ksort($tabs[$year][$month]);
+    }
+    ksort($tabs[$year]);
+  }
+  ksort($tabs);
+  return $output;
+}
 
 
+/**
+ * Queries solr to get an array of related issues.
+ *
+ * @param string $parent
+ *   The pid of a Newspaper object.
+ *
+ * @return mixed|null
+ *   Returns an array
+ *
+ */
 function islandora_newspaper_get_solr_issues($parent) {
   $solr_handler = variable_get('islandora_solr_request_handler', FALSE);
   $path_parts = parse_url(variable_get('islandora_solr_url', 'localhost:8080/solr'));
@@ -105,7 +200,7 @@ function islandora_newspaper_get_solr_issues($parent) {
   $solr_query = "content_model_ms:$cmodel AND parent_pid:$parent";
   $solr_params = array();
   $solr_params['fl'][] = 'PID, RELS_EXT_dateIssued_literal_ms, fgs_label_s';
-  $solr_params['sort'] = array('mods_originInfo_dateIssued_dt' . ' asc');
+  $solr_params['sort'] = array('mods_originInfo_dateIssued_dt asc');
   if ($solr_handler) {
     $solr_params['qt'] = $solr_handler;
   }
